@@ -65,3 +65,7 @@ I2C1->CR1 |= I2C_CR1_PE; // Enable I2C1
 ```
 
 **NOTE**: Page 1290 on RM0351 document has timing configurations for common modes.
+
+## Reading/Writing Sequence
+
+![Write then read from address](writeReadSequence.png)

@@ -63,37 +63,70 @@ void i2c1_init_100khz_hsi16(void) {
     I2C1->CR1 |= I2C_CR1_PE; // (Page 1316-18 in ref manual)
 }
 
-void i2c_read(uint8_t address, uint8_t bytes) {
+int i2c_read(uint8_t device_address, uint8_t register_address, uint8_t bytes, uint8_t *data) {
     // Page 1320 of reference manual:
-    //
-    // Write start
-    // Write address + write bit (0)
-    // ACK (from peripheral)
-    // Write register address we want to access
-    // Repeated start condition
-    // Target device address + read bit (1)
-    // Target device starts sending data
-    // On the final expected byte, write a nack to tell peripheral to stop sending
-    // Write stop
-
-    while ((I2C1->ISR >> 15) & 1) {
+    while ((I2C1->ISR >> 15) & 1)
         ; // Wait for I2C bus to become free
-    }
 
     // Clear bits 0-9 and set the new 7-bit address
-    I2C1->CR2 = (I2C1->CR2 & ~0xFF) | (address << 1);
+    I2C1->CR2 = (I2C1->CR2 & ~0xFF) | (device_address << 1);
 
-    // Clear the transfer direction bit so we can write
+    // Set the transfer direction to 0 so we can write
     I2C1->CR2 = (I2C1->CR2 & ~0x0400);
 
     // Write how many bytes we are writing (just 1 for address)
     I2C1->CR2 = (I2C1->CR2 & ~0xFF0000) | (1 << 16);
 
     // Clear the AUTOEND bit
-    I2C1->CR2 = (I2C1->CR2 & ~0x1000000);
+    I2C1->CR2 = (I2C1->CR2 & ~0x2000000);
 
     // Write start condition
     I2C1->CR2 |= (0x1 << 13);
 
-    I2C1->CR2
+    // Wait until TXIS is set, this bit is set by hardware when TXDR is ready for data
+    while (!((I2C1->ISR >> 1) & 1)) {
+        if ((I2C1->ISR >> 4) & 1) {
+            I2C1->ICR |= (1 << 4); // Clear NACKF
+            return -1;
+        }
+    };
+
+    // Load the address of the register we want to read from the peripheral
+    I2C1->TXDR = register_address;
+
+    // Wait for the transfer to complete (once we receive ack from slave)
+    while (!((I2C1->ISR >> 6) & 1)) { // Read TC (bit 6)
+        if ((I2C1->ISR >> 4) & 1) {   // Read nackf (bit 4)
+            I2C1->ICR |= (1 << 4);    // Clear nackf (slave nacked)
+            return -1;
+        }
+    }
+
+    // Set the transfer direction to 1 so we can read
+    I2C1->CR2 |= (0x1 << 10);
+
+    // Set NBYTES to how many bytes we want to read
+    I2C1->CR2 = (I2C1->CR2 & ~0xFF0000) | (bytes << 16);
+
+    // Set AUTOEND (auto nacks after all bytes have been read)
+    I2C1->CR2 |= (0x1 << 25);
+
+    // Set the start bit to 1, which sends repeated start + slave address + read bit
+    I2C1->CR2 |= (0x1 << 13);
+
+    // Now we loop and poll
+    for (int i = 0; i < bytes; i++) {
+        while (!((I2C1->ISR >> 2) & 1))
+            ; // Wait for received data to be copied into RXDR register
+        // Data is ready to be read now
+        data[i] = I2C1->RXDR;
+    }
+
+    while (!((I2C1->ISR >> 5) & 1))
+        ; // Wait for stop flag to be detected
+
+    // Clear the stop flag
+    I2C1->ICR |= (1 << 5); // Writing 1 to the stop detect bit clears it
+
+    return 0;
 }
