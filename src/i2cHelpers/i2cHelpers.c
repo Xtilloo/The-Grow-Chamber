@@ -10,7 +10,7 @@ void i2c1_init_100khz_hsi16(void) {
     while (!(RCC->CR & RCC_CR_HSIRDY)) {
     }
     RCC->CCIPR &= ~RCC_CCIPR_I2C1SEL;
-    RCC->CCIPR |= (2U << RCC_CCIPR_I2C1SEL_Pos); /* HSI16 */
+    RCC->CCIPR |= (2U << 12); /* HSI16 */
 
     /* 2. Enable GPIOB and I2C1 clocks */
     RCC->AHB2ENR |= RCC_AHB2ENR_GPIOBEN;
@@ -22,8 +22,8 @@ void i2c1_init_100khz_hsi16(void) {
     GPIOB->MODER |= (0x2 << (8 * 2));  // Set pin configuration to alternate function
 
     // Configure GPIOB8's alternate function as I2C (page 308 of ref manual and 89 of datasheet)
-    GPIOB->AFRH &= ~(0xF << (0 * 4)); // Clear the alternate function select bits
-    GPIOB->AFRH |= (0x4 << (0 * 4));  // Set the alternate function to I2C
+    GPIOB->AFR[1] &= ~(0xF << (0 * 4)); // Clear the alternate function select bits
+    GPIOB->AFR[1] |= (0x4 << (0 * 4));  // Set the alternate function to I2C
 
     // Configure GPIOB8 as open drain (page 304 of reference manual)
     GPIOB->OTYPER &= ~(0x1 << (8 * 1)); // clear pin 8's values
@@ -38,8 +38,8 @@ void i2c1_init_100khz_hsi16(void) {
     GPIOB->MODER |= (0x2 << (9 * 2));  // Set pin configuration to alternate function
 
     // Configure GPIOB9's alternate function as I2C (page 308 of ref manual and 89 of datasheet)
-    GPIOB->AFRH &= ~(0xF << (1 * 4)); // Clear the alternate function select bits
-    GPIOB->AFRH |= (0x4 << (1 * 4));  // Set the alternate function to I2C
+    GPIOB->AFR[1] &= ~(0xF << (1 * 4)); // Clear the alternate function select bits
+    GPIOB->AFR[1] |= (0x4 << (1 * 4));  // Set the alternate function to I2C
 
     // Configure GPIOB9 as open drain (page 304 of reference manual)
     GPIOB->OTYPER &= ~(0x1 << (9 * 1)); // clear pin 8's values
