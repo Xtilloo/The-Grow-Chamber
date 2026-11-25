@@ -1,4 +1,4 @@
-#include "i2cHelpers/i2cHelpers.c"
+#include "i2cDrivers/i2cDriver.c"
 #include "stm32l476xx.h"
 
 int main(void) {

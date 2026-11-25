@@ -1,3 +1,5 @@
+# Software Design Document (SDD) for I2CDriver
+
 ## Setting up I2C
 
 To use I2C on stm32l476, we need to configure a few things before we can even send data. This involves the following:
