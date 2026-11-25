@@ -3,8 +3,7 @@
 #include "stm32l476xx.h"
 
 int main(void) {
-    i2c1_init_100khz_hsi16();
-    SPI_Init();
+    SPI_Init(SPI1);
     return 0;
 }
 

@@ -45,7 +45,7 @@ load
 2. Inside gdb, run `make` directly using `!`:
 
 ```
-!make
+!make clean && make
 ```
 
 3. Reload the newly compiled binary onto the STM32 and restart
