@@ -41,14 +41,16 @@ void set_data(bool state) {
 }
 
 void LCD_Init(void) {
-    /* 1. Enable GPIOB for data/command line*/
+    /* 1. Enable GPIOB for data/command pin*/
     RCC->AHB2ENR |= RCC_AHB2ENR_GPIOBEN;
     delay_ms(1);
 
+    /* 2. Configure GPIOB5 to be general purpose output */
     GPIOB->MODER &= ~(0x3 << (LCD_DC_PIN * 2));
     GPIOB->MODER |= (0x1 << (LCD_DC_PIN * 2)); // general purpose output
     GPIOB->BSRR = (1U << LCD_DC_PIN);          // idle high (data)
 
+    /* 3. Write commands */
     LCD_WriteCommand(LCD_CMD_SOFTWARE_RESET);
     delay_ms(120);
 
@@ -56,4 +58,5 @@ void LCD_Init(void) {
     delay_ms(120);
 
     LCD_WriteCommand(LCD_CMD_DISPLAY_ON);
+    delay_ms(120);
 }
