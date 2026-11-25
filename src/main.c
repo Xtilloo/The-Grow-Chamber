@@ -3,10 +3,16 @@
 #include "spiDriver.h"
 #include "stm32l476xx.h"
 
+volatile uint8_t lcd_id[3];
+volatile int lcd_id_ok;
+
 int main(void) {
     configure_SPI_pins();
     SPI_Init(SPI1);
     LCD_Init();
+
+    uint8_t id[3];
+    LCD_WriteReadData(0x9, id, 3);
 
     return 0;
 }
