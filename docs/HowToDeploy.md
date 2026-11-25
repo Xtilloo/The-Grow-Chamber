@@ -101,3 +101,37 @@ x/4wx 0x40013000
 x/1wx 0x4002104C # RCC_AHB2ENR (GPIO clocks)
 x/1wx 0x40021060 # RCC_APB2ENR (SPI 1 Clock)
 ```
+
+---
+
+# Appendix: macOS (Apple Silicon, e.g. M3)
+
+The firmware is plain C + CMSIS, so the same build works on macOS. Only tool installation and the GDB binary name differ.
+
+## Native macOS (recommended)
+
+```
+brew install make arm-none-eabi-gcc stlink arm-none-eabi-gdb
+```
+
+- Build: `make` (the stock macOS GNU Make 3.81 should work; if not, use `gmake` from `brew install make`).
+- Flash: `make flash`, or `st-flash --reset write build/firmware.bin 0x08000000`. Verify the board with `st-info --probe`. No USB driver is needed.
+- Debug: use `arm-none-eabi-gdb` instead of `gdb-multiarch`:
+
+```
+# Terminal 1
+st-util
+
+# Terminal 2
+arm-none-eabi-gdb build/firmware.elf
+```
+
+Then in GDB, the commands are the same as on Debian (`target extended-remote localhost:4242`, `monitor reset halt`, `load`).
+
+## VM on a Mac
+
+- Use an **arm64** Debian guest (UTM, Parallels, or VMware Fusion). Avoid x86 emulation (slow).
+- Install: `sudo apt install gcc-arm-none-eabi stlink-tools gdb-multiarch make`
+- Building works as on Debian 13.
+- Flashing/debugging from inside the VM requires **USB passthrough** of the ST-LINK. Parallels and VMware Fusion handle it well; UTM/QEMU can be flaky. Make sure the stlink udev rules are installed (the `stlink-tools` package normally does this).
+- Alternative: build in the VM, then flash from macOS using the shared `build/firmware.bin` with `st-flash`, which avoids USB passthrough.
