@@ -1,5 +1,4 @@
-#include "stm32l476xx.h"
-
+#include "i2cDriver.h"
 // Enable GPIO and I2C clocks
 // Configure SCL and SDA as open drain
 // Configure timing
