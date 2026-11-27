@@ -6,10 +6,12 @@
 // RESET and LED (backlight) are tied to 3.3 V in hardware. For now.
 void LCD_Init(void);
 
-// command = U8 command for ILI9341 command
+// command = U8 command for ILI9341 command (passed as int to allow for NULL)
 // *data = pointer to array of U8 data values
 // size = size of data array, not including command arg
-void LCD_WriteData(uint8_t command, uint8_t *data, int size);
+void LCD_WriteData(uint8_t *command, uint8_t *data, int size);
+
+void LCD_WriteReadData(uint8_t *command, uint8_t *readBuffer, int size);
 
 void set_data(bool state);
 

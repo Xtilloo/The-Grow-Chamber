@@ -4,14 +4,15 @@
 
 #define ARRAY_LEN(arr) (sizeof(arr) / sizeof((arr)[0])) // Gives length of array
 
-#define LCD_CMD_SOFTWARE_RESET 0x01
-#define LCD_CMD_SLEEP_OUT 0x11
-#define LCD_CMD_DISPLAY_ON 0x29
-#define LCD_CMD_READ_ID 0x04
-#define LCD_COLMOD 0x3A
+#define LCD_CMD_SOFTWARE_RESET ((uint8_t[]){0x01})
+#define LCD_CMD_SLEEP_OUT ((uint8_t[]){0x11})
+#define LCD_CMD_DISPLAY_ON ((uint8_t[]){0x29})
+#define LCD_CMD_READ_ID ((uint8_t[]){0x04})
+#define LCD_COLMOD ((uint8_t[]){0x3A})
+#define LCD_MADCTL ((uint8_t[]){0x36})
 
-void LCD_WriteData(uint8_t command, uint8_t *data, int size) {
-    bool hasCommand = (command >= 0); // If command = null, then command = 0
+void LCD_WriteData(uint8_t *command, uint8_t *data, int size) {
+    bool hasCommand = (command != NULL);
     bool hasData = (data != NULL && size > 0);
 
     if (!hasCommand && !hasData) {
@@ -23,8 +24,8 @@ void LCD_WriteData(uint8_t command, uint8_t *data, int size) {
 
     // Check if we are going to write a command
     if (hasCommand) {
-        set_data(false);              // We are writing a command
-        SPI_Write(SPI1, &command, 1); // Write the command
+        set_data(false);             // We are writing a command
+        SPI_Write(SPI1, command, 1); // Write the command
     }
 
     if (hasData) {
@@ -35,11 +36,11 @@ void LCD_WriteData(uint8_t command, uint8_t *data, int size) {
     SPI_CS_High(); // End the transaction
 }
 
-void LCD_WriteReadData(uint8_t command, uint8_t *readBuffer, int size) {
+void LCD_WriteReadData(uint8_t *command, uint8_t *readBuffer, int size) {
     // Write
     set_data(false); // Set DC to command
     SPI_CS_Low();
-    SPI_Write(SPI1, &command, 1);
+    SPI_Write(SPI1, command, 1);
 
     // Read
     set_data(true); // Set DC to data
@@ -71,8 +72,11 @@ void LCD_Init(void) {
     LCD_WriteData(LCD_CMD_SLEEP_OUT, NULL, 0);
     delay_ms(120);
 
-    uint8_t COLMOD_PARAM[1] = {0x55}; // Set mode to 16-bit RGB565
+    // Set display mode to 16-bit RGB565
+    uint8_t COLMOD_PARAM[1] = {0x55};
     LCD_WriteData(LCD_COLMOD, COLMOD_PARAM, ARRAY_LEN(COLMOD_PARAM));
 
-    delay_ms(120);
+    // Set to portrait mode (0x28 for landscape)
+    uint8_t MADCTL_PARAM[1] = {0x48};
+    LCD_WriteData(LCD_MADCTL, MADCTL_PARAM, 1);
 }
