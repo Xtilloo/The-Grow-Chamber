@@ -2,23 +2,37 @@
 
 #define LCD_DC_PIN 5 // PB5
 
+#define ARRAY_LEN(arr) (sizeof(arr) / sizeof((arr)[0])) // Gives length of array
+
 #define LCD_CMD_SOFTWARE_RESET 0x01
 #define LCD_CMD_SLEEP_OUT 0x11
 #define LCD_CMD_DISPLAY_ON 0x29
 #define LCD_CMD_READ_ID 0x04
+#define LCD_COLMOD 0x3A
 
-void LCD_WriteCommand(uint8_t cmd) {
-    set_data(false);
-    SPI_CS_Low();
-    SPI_Write(SPI1, &cmd, 1);
-    SPI_CS_High();
-}
+void LCD_WriteData(uint8_t command, uint8_t *data, int size) {
+    bool hasCommand = (command >= 0); // If command = null, then command = 0
+    bool hasData = (data != NULL && size > 0);
 
-void LCD_WriteData(uint8_t *data, int size) {
-    set_data(true);
-    SPI_CS_Low();
-    SPI_Write(SPI1, data, size);
-    SPI_CS_High();
+    if (!hasCommand && !hasData) {
+        // Nothign to do, return early
+        return;
+    }
+
+    SPI_CS_Low(); // Chip Select (start the transaction)
+
+    // Check if we are going to write a command
+    if (hasCommand) {
+        set_data(false);              // We are writing a command
+        SPI_Write(SPI1, &command, 1); // Write the command
+    }
+
+    if (hasData) {
+        set_data(true);              // We are sending data
+        SPI_Write(SPI1, data, size); // Write the data
+    }
+
+    SPI_CS_High(); // End the transaction
 }
 
 void LCD_WriteReadData(uint8_t command, uint8_t *readBuffer, int size) {
@@ -51,12 +65,14 @@ void LCD_Init(void) {
     GPIOB->BSRR = (1U << LCD_DC_PIN);          // idle high (data)
 
     /* 3. Write commands */
-    LCD_WriteCommand(LCD_CMD_SOFTWARE_RESET);
+    LCD_WriteData(LCD_CMD_SOFTWARE_RESET, NULL, 0);
     delay_ms(120);
 
-    LCD_WriteCommand(LCD_CMD_SLEEP_OUT);
+    LCD_WriteData(LCD_CMD_SLEEP_OUT, NULL, 0);
     delay_ms(120);
 
-    LCD_WriteCommand(LCD_CMD_DISPLAY_ON);
+    uint8_t COLMOD_PARAM[1] = {0x55}; // Set mode to 16-bit RGB565
+    LCD_WriteData(LCD_COLMOD, COLMOD_PARAM, ARRAY_LEN(COLMOD_PARAM));
+
     delay_ms(120);
 }

@@ -11,9 +11,6 @@ int main(void) {
     SPI_Init(SPI1);
     LCD_Init();
 
-    uint8_t id[3];
-    LCD_WriteReadData(0x9, id, 3);
-
     return 0;
 }
 
