@@ -25,20 +25,26 @@ void SPI_Init(SPI_TypeDef *SPIx) {
     SPIx->CR1 &= ~SPI_CR1_SPE; // Disable SPI for configuration
 
     /* 2. Configure full duplex and 2-line unidirectional data mode*/
-    SPIx->CR1 &= ~SPI_CR1_RXONLY;   // Clear bit 10, which enables full duplex mode, page 1468 in RM0351
-    SPIx->CR1 &= ~SPI_CR1_BIDIMODE; // Clear bit 15, which enables 2-line unidirectional data mode
+    SPIx->CR1 &= ~SPI_CR1_RXONLY;   // Clear bit 10, which enables full duplex
+                                    // mode, page 1468 in RM0351
+    SPIx->CR1 &= ~SPI_CR1_BIDIMODE; // Clear bit 15, which enables 2-line
+                                    // unidirectional data mode
 
     /* 3. Configure data frame format*/
-    SPIx->CR2 &= ~SPI_CR2_DS;                                // clear data size bits (bits 11:8)
-    SPIx->CR2 |= SPI_CR2_DS_0 | SPI_CR2_DS_1 | SPI_CR2_DS_2; // 0111 (8-bit data frames)
-    SPIx->CR1 &= ~SPI_CR1_LSBFIRST;                          // Send MSB first (default for IL9341 display)
+    SPIx->CR2 &= ~SPI_CR2_DS; // clear data size bits (bits 11:8)
+    SPIx->CR2 |=
+        SPI_CR2_DS_0 | SPI_CR2_DS_1 | SPI_CR2_DS_2; // 0111 (8-bit data frames)
+    SPIx->CR1 &=
+        ~SPI_CR1_LSBFIRST; // Send MSB first (default for IL9341 display)
 
     /* 4. Configure Clock*/
-    SPIx->CR1 &= ~SPI_CR1_CPHA; // Set clock phase to 0 (first clock transition is first data capture)
+    SPIx->CR1 &= ~SPI_CR1_CPHA; // Set clock phase to 0 (first clock transition
+                                // is first data capture)
     SPIx->CR1 &= ~SPI_CR1_CPOL; // Set clock polarity to 0 (CK to 0 when idle)
 
     /* 5. Configure baud rate */
-    SPIx->CR1 |= SPI_CR1_BR_0; // Set baud rate to fclk / 4 (assuming fclk = 16MHz, baud = 4MHz)
+    SPIx->CR1 &= ~SPI_CR1_BR;
+    SPIx->CR1 |= SPI_CR1_BR_1; // 010 = fPCLK / 8 (80 MHz / 8 = 10 MHz)
 
     /* 6. Configure CRC */
     SPIx->CRCPR = 10;            // Set CRC polynomial
@@ -72,7 +78,8 @@ void configure_SPI_pins() {
 
     delay_ms(50);
 
-    /* 2. Configure PA5 (SCK), PA6 (MISO), PA7 (MOSI) as alternate function (10) */
+    /* 2. Configure PA5 (SCK), PA6 (MISO), PA7 (MOSI) as alternate function (10)
+     */
     GPIOA->MODER &= ~(0x3 << (5 * 2));  // Clear the bits we are about to change
     GPIOA->MODER |= (0x2 << (5 * 2));   // Set PA5 to alternate function
     GPIOA->AFR[0] &= ~(0xF << (5 * 4)); // Clear the alternate function bits
@@ -92,19 +99,27 @@ void configure_SPI_pins() {
     GPIOB->MODER &= ~(0x3 << (6 * 2));
     GPIOB->MODER |= (0x1 << (6 * 2));
     GPIOB->BSRR = GPIO_BSRR_BS6;
+
+    /* 4. Set High output speed (10) for PA5 (SCK), PA6 (MISO), PA7 (MOSI), PB6
+     * (CSX) */
+    GPIOA->OSPEEDR &=
+        ~((0x3U << (5 * 2)) | (0x3U << (6 * 2)) | (0x3U << (7 * 2)));
+    GPIOA->OSPEEDR |= (0x2U << (5 * 2)) | (0x2U << (6 * 2)) | (0x2U << (7 * 2));
+    GPIOB->OSPEEDR &= ~(0x3U << (6 * 2));
+    GPIOB->OSPEEDR |= (0x2U << (6 * 2));
 }
 
 void SPI_CS_Low(void) {
     GPIOB->BSRR = GPIO_BSRR_BR6; // PB6, active low
 }
 
-void SPI_CS_High(void) {
-    GPIOB->BSRR = GPIO_BSRR_BS6;
-}
+void SPI_CS_High(void) { GPIOB->BSRR = GPIO_BSRR_BS6; }
 
-void SPI_Transfer(SPI_TypeDef *SPIx, const uint8_t *txBuf, uint8_t *rxBuf, int size) {
+void SPI_Transfer(SPI_TypeDef *SPIx, const uint8_t *txBuf, uint8_t *rxBuf,
+                  int size) {
     for (int i = 0; i < size; i++) {
-        // If we are transmitting something, set txByte to that value, otherwise, dummy byte.
+        // If we are transmitting something, set txByte to that value,
+        // otherwise, dummy byte.
         uint8_t txByte = (txBuf == NULL) ? 0xFF : txBuf[i];
 
         // Wait for TXE (transmit buffer empty)
@@ -127,8 +142,35 @@ void SPI_Transfer(SPI_TypeDef *SPIx, const uint8_t *txBuf, uint8_t *rxBuf, int s
         ;
 }
 
-void SPI_Write(SPI_TypeDef *SPIx, uint8_t *txBuf, int size) {
-    SPI_Transfer(SPIx, txBuf, NULL, size); // Send data, ignore MISO
+static void SPI_WriteTxOnly(SPI_TypeDef *SPIx, const uint8_t *txBuf, int size) {
+    if (txBuf == NULL || size <= 0) {
+        return;
+    }
+
+    for (int i = 0; i < size; i++) {
+        // Feed the 4-byte hardware TX FIFO as soon as space is available
+        while (!(SPIx->SR & SPI_SR_TXE))
+            ;
+        *(volatile uint8_t *)&SPIx->DR = txBuf[i];
+    }
+
+    // Wait for the last byte to finish shifting out on the wire
+    while (SPIx->SR & SPI_SR_BSY)
+        ;
+
+    // Drain unread bytes from RX FIFO and clear OVR (DR read then SR read)
+    while (SPIx->SR & SPI_SR_RXNE) {
+        (void)*(volatile uint8_t *)&SPIx->DR;
+    }
+    (void)SPIx->SR;
+}
+
+void SPI_Write(SPI_TypeDef *SPIx, const uint8_t *txBuf, int size, bool fast) {
+    if (fast) {
+        SPI_WriteTxOnly(SPIx, txBuf, size);
+    } else {
+        SPI_Transfer(SPIx, txBuf, NULL, size); // Send data, ignore MISO
+    }
 }
 
 void SPI_Read(SPI_TypeDef *SPIx, uint8_t *rxBuf, int size) {
