@@ -79,4 +79,5 @@ void LCD_Init(void) {
     // Set to portrait mode (0x28 for landscape)
     uint8_t MADCTL_PARAM[1] = {0x48};
     LCD_WriteData(LCD_MADCTL, MADCTL_PARAM, 1);
+    what
 }
