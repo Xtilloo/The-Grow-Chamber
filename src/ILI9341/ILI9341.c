@@ -91,6 +91,45 @@ void LCD_SetWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
     LCD_WriteData(LCD_CMD_PASET, data, ARRAY_LEN(data));
 }
 
+void LCD_FillRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
+                  uint16_t color) {
+
+    if (x >= LCD_WIDTH || y >= LCD_HEIGHT || w == 0 || h == 0)
+        return;
+
+    // Clip to screen bounds
+    if ((x + w) > LCD_WIDTH) {
+        w = LCD_WIDTH - x;
+    }
+    if ((y + h) > LCD_HEIGHT) {
+        h = LCD_HEIGHT - y;
+    }
+
+    LCD_SetWindow(x, y, x + w - 1, y + h - 1);
+    LCD_WriteData(LCD_CMD_RAMWR, NULL, 0);
+
+    // Prepare 512 byte buffers for pixels
+    // Populate the pixel buffer
+    uint8_t px[512];
+    uint8_t hi = (uint8_t)(color >> 8);
+    uint8_t lo = (uint8_t)(color & 0xFF);
+
+    uint32_t total_pixels = w * h;
+    uint32_t chunk_pixels =
+        (total_pixels < 256) ? total_pixels : 256; // Cap chunk_pixels at 256
+
+    for (size_t i = 0; i < chunk_pixels; i++) {
+        px[2 * i] = hi;
+        px[2 * i + 1] = lo;
+    }
+
+    while (total_pixels > 0) {
+        uint32_t batch = (total_pixels > 256) ? 256 : total_pixels;
+        LCD_WriteData(NULL, px, batch * 2);
+        total_pixels -= batch;
+    }
+}
+
 void LCD_DrawPixel(uint16_t x, uint16_t y, uint16_t color) {
     if (x >= LCD_WIDTH || y >= LCD_HEIGHT)
         return;
@@ -102,24 +141,6 @@ void LCD_DrawPixel(uint16_t x, uint16_t y, uint16_t color) {
     LCD_WriteData(NULL, px, ARRAY_LEN(px));
 }
 
-void LCD_ClearScreen(uint16_t color) {
-    LCD_SetWindow(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1); // Set window
-    LCD_WriteData(LCD_CMD_RAMWR, NULL, 0);
-
-    // Populate the pixel buffer
-    uint8_t px[1024];
-
-    for (size_t i = 0; i < sizeof(px); i += 2) {
-        px[i] = (uint8_t)(color >> 8);
-        px[i + 1] = (uint8_t)(color & 0xFF);
-    }
-
-    // The screen is 240 x 320 = 76800 pixels, and each pixel takes two color
-    // bytes. Thus, to clear the entire screen, we need to send a total of
-    // 153600 bytes over SPI We can chunk these bytes 512 at a time (so we don't
-    // fill up ram). This leaves, 153600 / 512 = 300 total chunks
-    for (int i = 0; i < (153600 / 1024); i++) {
-        // Send the pixel buffer over SPI
-        LCD_WriteData(NULL, px, ARRAY_LEN(px));
-    }
+void LCD_FillScreen(uint16_t color) {
+    LCD_FillRect(0, 0, LCD_WIDTH, LCD_HEIGHT, COLOR_GREEN);
 }

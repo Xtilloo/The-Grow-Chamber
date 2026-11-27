@@ -13,7 +13,9 @@ int main(void) {
     SPI_Init(SPI1);
     LCD_Init();
 
-    LCD_ClearScreen(COLOR_CYAN);
+    LCD_FillScreen(COLOR_WHITE);
+
+    LCD_FillRect(0, 0, 50, 50, COLOR_BLACK);
 
     delay_ms(50);
 

@@ -24,6 +24,9 @@
 #define COLOR_CYAN 0x07FF
 #define COLOR_MAGENTA 0xF81F
 
+void LCD_FillRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
+                  uint16_t color);
+
 // Helper macro to pack 8-bit R, G, B into 16-bit RGB565
 #define RGB565(r, g, b)
 
@@ -36,7 +39,7 @@ void LCD_Init(void);
 // transfer) size = size of data array, not including command arg
 void LCD_WriteData(uint8_t *command, uint8_t *data, int size);
 
-void LCD_ClearScreen(uint16_t color);
+void LCD_FillScreen(uint16_t color);
 
 void LCD_DrawPixel(uint16_t x, uint16_t y, uint16_t color);
 
