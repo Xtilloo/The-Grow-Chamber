@@ -66,11 +66,96 @@ void LCD_Init(void) {
     LCD_WriteData(LCD_CMD_COLMOD, COLMOD_PARAM, ARRAY_LEN(COLMOD_PARAM));
 
     // Set to portrait mode
-    uint8_t MADCTL_PARAM[1] = {0xA8};
+    uint8_t MADCTL_PARAM[1] = {0x68};
     LCD_WriteData(LCD_CMD_MADCTL, MADCTL_PARAM, 1);
 
     // Turn on panel
     LCD_WriteData(LCD_CMD_DISPON, NULL, 0);
+}
+
+void LCD_DrawHLine(uint16_t x, uint16_t y, uint16_t w, uint16_t color) {
+    LCD_FillRect(x, y, w, 1, color);
+}
+
+void LCD_DrawVLine(uint16_t x, uint16_t y, uint16_t h, uint16_t color) {
+    LCD_FillRect(x, y, 1, h, color);
+}
+
+void LCD_DrawRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
+                  uint16_t color) {
+    LCD_DrawHLine(x, y, w, color);
+    LCD_DrawHLine(x, y + h - 1, w, color);
+    LCD_DrawVLine(x, y, h, color);
+    LCD_DrawVLine(x + w - 1, y, w, color);
+}
+
+void LCD_DrawCircle(uint16_t x0, uint16_t y0, uint16_t r, uint16_t color) {
+    int16_t x = r;
+    int16_t y = 0;
+    int16_t err = 0;
+
+    while (x >= y) {
+        LCD_DrawPixel(x0 + x, y0 + y, color);
+        LCD_DrawPixel(x0 + y, y0 + x, color);
+        LCD_DrawPixel(x0 - y, y0 + x, color);
+        LCD_DrawPixel(x0 - x, y0 + y, color);
+        LCD_DrawPixel(x0 - x, y0 - y, color);
+        LCD_DrawPixel(x0 - y, y0 - x, color);
+        LCD_DrawPixel(x0 + y, y0 - x, color);
+        LCD_DrawPixel(x0 + x, y0 - y, color);
+
+        y += 1;
+        err += 1 + 2 * y;
+        if (2 * (err - x) + 1 > 0) {
+            x -= 1;
+            err += 1 - 2 * x;
+        }
+    }
+}
+
+void LCD_DrawChar(uint16_t x, uint16_t y, char c, uint16_t fg, uint16_t bg,
+                  uint8_t scale) {
+    if (c < 0x20 || c > 0x7E)
+        c = '?';
+    const uint8_t *glyph = Font5x7[c - 0x20];
+
+    // Draw 5 character columns + 1 spacing column
+    for (uint8_t col = 0; col < 6; col++) {
+        uint8_t line = (col < 5) ? glyph[col] : 0x00;
+
+        for (int8_t row = 7; row >= 0; row--) {
+            uint16_t color = (line & 0x01) ? fg : bg;
+
+            if (scale == 1) {
+                LCD_DrawPixel(x + col, y + row, color);
+            } else {
+                LCD_FillRect(x + col * scale, y + row * scale, scale, scale,
+                             color);
+            }
+            line >>= 1;
+        }
+    }
+}
+
+void LCD_DrawString(uint16_t x, uint16_t y, const char *str, uint16_t fg,
+                    uint16_t bg, uint8_t scale) {
+    uint16_t cursor_x = x;
+    uint16_t cursor_y = y;
+
+    while (*str) {
+        if (*str == '\n') {
+            cursor_x = x;
+            cursor_y += 8 * scale;
+        } else {
+            if (cursor_x + (6 * scale) > LCD_WIDTH) {
+                cursor_x = x;
+                cursor_y += 8 * scale;
+            }
+            LCD_DrawChar(cursor_x, cursor_y, *str, fg, bg, scale);
+            cursor_x += 6 * scale;
+        }
+        str++;
+    }
 }
 
 void LCD_SetWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1) {
@@ -142,5 +227,5 @@ void LCD_DrawPixel(uint16_t x, uint16_t y, uint16_t color) {
 }
 
 void LCD_FillScreen(uint16_t color) {
-    LCD_FillRect(0, 0, LCD_WIDTH, LCD_HEIGHT, COLOR_GREEN);
+    LCD_FillRect(0, 0, LCD_WIDTH, LCD_HEIGHT, color);
 }

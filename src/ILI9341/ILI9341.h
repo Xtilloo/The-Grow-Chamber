@@ -2,6 +2,7 @@
 #define ILI9341_H
 
 #include "ILI9341_constants.h"
+#include "font5x7.h"
 #include "spiDriver.h"
 #include "stdbool.h"
 #include "stm32l476xx.h"
@@ -27,6 +28,8 @@
 void LCD_FillRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
                   uint16_t color);
 
+void LCD_DrawCircle(uint16_t x, uint16_t y, uint16_t r, uint16_t color);
+
 // Helper macro to pack 8-bit R, G, B into 16-bit RGB565
 #define RGB565(r, g, b)
 
@@ -38,6 +41,19 @@ void LCD_Init(void);
 // *data = pointer to array of U8 data values (or NULL for command-only
 // transfer) size = size of data array, not including command arg
 void LCD_WriteData(uint8_t *command, uint8_t *data, int size);
+
+void LCD_DrawHLine(uint16_t x, uint16_t y, uint16_t w, uint16_t color);
+
+void LCD_DrawVLine(uint16_t x, uint16_t y, uint16_t h, uint16_t color);
+
+void LCD_DrawRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
+                  uint16_t color);
+
+void LCD_DrawChar(uint16_t x, uint16_t y, char c, uint16_t fg, uint16_t bg,
+                  uint8_t scale);
+
+void LCD_DrawString(uint16_t x, uint16_t y, const char *str, uint16_t fg,
+                    uint16_t bg, uint8_t scale);
 
 void LCD_FillScreen(uint16_t color);
 

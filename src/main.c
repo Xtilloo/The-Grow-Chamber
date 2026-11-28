@@ -13,11 +13,24 @@ int main(void) {
     SPI_Init(SPI1);
     LCD_Init();
 
-    LCD_FillScreen(COLOR_WHITE);
+    LCD_FillScreen(COLOR_BLACK);
 
-    LCD_FillRect(0, 0, 50, 50, COLOR_BLACK);
+    delay_ms(2000);
 
-    delay_ms(50);
+    char *str = "Time left until bomb explodes:";
+    LCD_DrawString(20, 200, str, COLOR_CYAN, COLOR_BLACK, 1);
+
+    for (int i = 9; i >= 0; i--) {
+        LCD_DrawChar(LCD_WIDTH / 2.0, LCD_HEIGHT / 2.0, i + '0', COLOR_RED,
+                     COLOR_BLACK, 4);
+        delay_ms(1000);
+    }
+
+    LCD_FillScreen(COLOR_RED);
+
+    str = "Death.";
+    LCD_DrawString(LCD_WIDTH / 2.0 - LCD_WIDTH / 4.0, LCD_HEIGHT / 2.0, str,
+                   COLOR_CYAN, COLOR_RED, 4);
 
     return 0;
 }
